@@ -3,7 +3,7 @@ import sqlite3
 import json
 
 # MQTT connection settings
-BROKER = "broker.emqx.io"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 TOPIC = "smarthome/#"  # Subscribe to all topics under smarthome/
 

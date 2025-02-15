@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTe
 import paho.mqtt.client as mqtt
 
 
-BROKER = "broker.emqx.io"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 
 CONTROL_TOPIC = "smarthome/control/dht"
@@ -68,20 +68,29 @@ class SmartHomeGUI(QWidget):
             publish.single(CONTROL_TOPIC, "on", hostname=BROKER)
             self.toggle_sensor_button.setText("Turn OFF Sensor")
             self.sensor_on = True
+    
     def toggle_relay(self):
-        """Send an MQTT command to toggle the Relay ON/OFF."""
+        """Send an MQTT 'toggle' command to the relay, similar to the button emulator."""
         try:
             client = mqtt.Client()
             client.connect(BROKER, PORT, 60)
 
-            new_state = "off" if self.relay_state == "on" else "on"
-            
-            client.publish("smarthome/control/relay", new_state)
-            client.disconnect()
-            
-            self.relay_state = new_state  
+            message = json.dumps({"command": "toggle"})
+            topic = "smarthome/actuator/button"
 
-            print(f"📤 Sent: '{new_state}' to smarthome/control/relay")
+            client.publish(topic, message)
+            client.disconnect()
+
+            print(f"📤 GUI Sent: {message} to {topic}")
+
+            def on_message(client, userdata, msg):
+                print(f"📥 DEBUG (GUI): Received - {msg.topic}: {msg.payload.decode()}")
+
+            test_client = mqtt.Client()
+            test_client.on_message = on_message
+            test_client.connect(BROKER, PORT, 60)
+            test_client.subscribe(topic)
+            test_client.loop_start()
 
         except Exception as e:
             print(f"❌ Error sending MQTT command: {e}")
@@ -133,8 +142,6 @@ class SmartHomeGUI(QWidget):
             print(f"Error retrieving data: {e}")
             return []
     
-    
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

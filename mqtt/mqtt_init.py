@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 
 # MQTT Broker configuration
-BROKER = "broker.emqx.io"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 
 # List of topics to subscribe
@@ -21,8 +21,7 @@ def on_connect(client, userdata, flags, rc):
             client.subscribe(topic)
             print(f"📡 Subscribed to {topic[0]}")
     else:
-        print(f"❌ Connection
-               failed with code {rc}")
+        print(f"❌ Connection failed with code {rc}")
 
 def on_message(client, userdata, msg):
     """Handles incoming messages from MQTT topics."""

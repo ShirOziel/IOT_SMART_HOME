@@ -3,7 +3,7 @@ import time
 import random
 import json
 
-BROKER = "broker.emqx.io"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 TOPIC = "smarthome/sensor/dht"
 CONTROL_TOPIC = "smarthome/control/dht"

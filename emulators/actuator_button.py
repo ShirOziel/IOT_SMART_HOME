@@ -1,7 +1,7 @@
 import paho.mqtt.client as mqtt
 import time
 
-BROKER = "broker.emqx.io"
+BROKER = "test.mosquitto.org"
 PORT = 1883
 TOPIC = "smarthome/actuator/button"
 
