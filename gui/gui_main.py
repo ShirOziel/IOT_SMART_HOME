@@ -33,10 +33,10 @@ class SmartHomeGUI(QWidget):
         self.refresh_button.clicked.connect(self.load_data)
         layout.addWidget(self.refresh_button)
 
+        # כפתור Toggle Relay
         self.relay_button = QPushButton("Toggle Relay", self)
         self.relay_button.clicked.connect(self.toggle_relay)
         layout.addWidget(self.relay_button)
-
 
         # כפתור הפעלה/כיבוי של DHT
         self.toggle_sensor_button = QPushButton("Turn OFF Sensor", self)
@@ -56,7 +56,14 @@ class SmartHomeGUI(QWidget):
         self.setLayout(layout)
         self.sensor_on = True  # מצב חיישן התחלתי - דולק
 
-        self.load_data()
+        self.load_data()  # טעינת נתונים ראשונית
+
+        # 🔹 התחברות ל-MQTT והאזנה לסטטוס ה-Relay 🔹
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.on_message = self.on_mqtt_message
+        self.mqtt_client.connect("test.mosquitto.org", 1883, 60)  # ודאי שזה אותו Broker של שאר הרכיבים
+        self.mqtt_client.subscribe("smarthome/relay")  # מאזין לסטטוס ה-Relay
+        self.mqtt_client.loop_start()
 
     def toggle_sensor(self):
         """Toggle the DHT sensor ON/OFF via MQTT."""
@@ -95,6 +102,13 @@ class SmartHomeGUI(QWidget):
         except Exception as e:
             print(f"❌ Error sending MQTT command: {e}")
 
+    def on_mqtt_message(self, client, userdata, msg):
+        """Update the GUI with the latest relay status."""
+        status = msg.payload.decode()
+        print(f"📥 GUI Received Relay Status: {status}")  # Debugging
+        self.relay_state = status  # שמירת מצב ה-Relay
+        self.text_display.append(f"🔄 Relay is now: {status}")
+
     def send_custom_temperature(self):
         """Send a manually entered temperature value via MQTT."""
         temp_value = self.temp_input.text().strip()
@@ -113,21 +127,23 @@ class SmartHomeGUI(QWidget):
         for row in rows:
             entry = f"[{row[0]}] {row[1]}: {row[2]}"
             
-            # בדיקת טמפרטורה חריגה
-            try:
-                data = json.loads(row[2])
-                if "temperature" in data:
-                    temp = data["temperature"]
-                    if temp > 30:
-                        entry += f"  ⚠️ WARNING: High Temperature {temp}°C 🔥"
-                    elif temp < 20:
-                        entry += f"  ⚠️ ALERT: Low Temperature {temp}°C ❄️"
-            except Exception as e:
-                entry += f"  ❌ Error processing alert: {e}"
+            # בדיקת האם ההודעה היא JSON תקין לפני ניסיון לפענח
+            if row[2].startswith("{") and row[2].endswith("}"):
+                try:
+                    data = json.loads(row[2])
+                    if "temperature" in data:
+                        temp = data["temperature"]
+                        if temp > 30:
+                            entry += f"  ⚠️ WARNING: High Temperature {temp}°C 🔥"
+                        elif temp < 20:
+                            entry += f"  ⚠️ ALERT: Low Temperature {temp}°C ❄️"
+                except Exception as e:
+                    entry += f"  ❌ Error processing alert: {e}"
 
             display_text += entry + "\n"
 
         self.text_display.setText(display_text if display_text else "No data available")
+
 
     def get_latest_data(self, limit=20):
         """Retrieve the latest sensor data from the database."""
